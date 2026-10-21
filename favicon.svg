@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <style>path{fill:none;stroke:#1e684e;stroke-width:1.6}@media (prefers-color-scheme:dark){path{stroke:#84c0ec}}</style>
+  <style>path{fill:none;stroke:#1f4f7a;stroke-width:1.6}@media (prefers-color-scheme:dark){path{stroke:#a8d2f2}}</style>
   <path d="M4 22c4-6 8-8 12-6s8 0 12-6"/>
   <path d="M4 27c4-5 8-6 12-4s8 0 12-5" opacity=".55"/>
   <path d="M4 17c4-7 8-10 12-8s8-1 12-6" opacity=".55"/>
