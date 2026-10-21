@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Anatomy of Album Sales · Alexandre Hopman-Ruh</title>
+<meta name="description" content="Alexandre Hopman-Ruh. A timing-of-first-purchase model of the weekly sales of Everclear's Sparkle and Fade, using a two-segment Burr XII mixture with radio airplay covariates.">
+<meta name="author" content="Alexandre Hopman-Ruh">
+<meta name="citation_title" content="The Anatomy of Album Sales: Modeling the Diffusion of Everclear's Sparkle and Fade Album Sales">
+<meta name="citation_author" content="Hopman-Ruh, Alexandre">
+<meta name="citation_publication_date" content="2026/04">
+<meta property="og:title" content="The Anatomy of Album Sales">
+<meta property="og:description" content="Modeling the diffusion of Everclear's Sparkle and Fade album sales.">
+<meta property="og:type" content="article">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;1,6..72,400&display=swap" rel="stylesheet">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "ScholarlyArticle",
+  "headline": "The Anatomy of Album Sales: Modeling the Diffusion of Everclear's Sparkle and Fade Album Sales",
+  "author": {"@type": "Person", "name": "Alexandre Hopman-Ruh"},
+  "datePublished": "2026-04",
+  "keywords": ["survival analysis", "Burr XII", "finite mixture models", "diffusion", "marketing analytics"]
+}
+</script>
+<style>
+  :root {
+    --bg: #ebf2ef;
+    --text: #18333a;
+    --muted: #5f777b;
+    --rule: #d2dfdb;
+    --line: #18333a;
+    --line-2: #7aaedb;
+    --mark: #1e684e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #07161a;
+      --text: #d9ece8;
+      --muted: #7d9a9c;
+      --rule: #1c3236;
+      --line: #d9ece8;
+      --line-2: #6fa9d4;
+      --mark: #5aa982;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #07161a;
+    --text: #d9ece8;
+    --muted: #7d9a9c;
+    --rule: #1c3236;
+    --line: #d9ece8;
+    --line-2: #6fa9d4;
+    --mark: #5aa982;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Inter", system-ui, -apple-system, sans-serif;
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+  a { color: inherit; }
+  body { position: relative; }
+  .corner {
+    position: absolute;
+    color: var(--muted);
+    line-height: 1;
+    z-index: 1;
+  }
+  .corner.top { top: 28px; left: 32px; }
+  .corner.right { bottom: 28px; right: 32px; }
+  .corner a {
+    text-decoration: none;
+    padding: 8px 0;
+    border-bottom: 1px solid transparent;
+    transition: color .2s, border-color .2s;
+  }
+  .corner a:hover, .corner a:focus-visible { color: var(--text); border-bottom-color: currentColor; outline: none; }
+
+  main {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 18vh 24px 16vh;
+  }
+  .label {
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 10.5px;
+    margin-bottom: 28px;
+  }
+  h1 {
+    font-family: "Newsreader", Georgia, serif;
+    font-weight: 400;
+    font-size: clamp(28px, 5vw, 38px);
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+  }
+  .subtitle {
+    font-family: "Newsreader", Georgia, serif;
+    font-size: clamp(17px, 2.6vw, 20px);
+    line-height: 1.35;
+    color: var(--muted);
+    margin-top: 10px;
+  }
+  .byline { margin-top: 24px; color: var(--muted); }
+
+  figure { margin: 56px 0 8px; }
+  svg.chart { width: 100%; height: auto; display: block; overflow: visible; }
+  svg.chart text { font-family: "Inter", sans-serif; font-size: 9.5px; fill: var(--muted); letter-spacing: 0.03em; }
+  figcaption { color: var(--muted); font-size: 11px; line-height: 1.6; margin-top: 14px; }
+  .key { display: inline-flex; align-items: center; gap: 6px; margin-right: 14px; white-space: nowrap; }
+  .key i { display: inline-block; width: 16px; height: 0; border-top: 1px solid var(--line); }
+  .key i.air { border-top: 1px dashed var(--line-2); }
+  .key i.fc { border-top: 1px dotted var(--mark); border-top-width: 2px; }
+
+  .abstract {
+    font-family: "Newsreader", Georgia, serif;
+    font-size: 17px;
+    line-height: 1.65;
+    margin-top: 48px;
+    letter-spacing: 0;
+  }
+  .abstract p + p { margin-top: 1em; }
+  .abstract em { font-style: italic; }
+
+  dl.stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    margin-top: 48px;
+  }
+  dl.stats div { padding: 20px 0; }
+  dl.stats div + div { padding-left: 20px; border-left: 1px solid var(--rule); }
+  dt { color: var(--muted); font-size: 10.5px; line-height: 1.4; }
+  dd {
+    font-family: "Newsreader", Georgia, serif;
+    font-size: 26px;
+    margin-bottom: 6px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .actions { margin-top: 40px; display: flex; gap: 28px; flex-wrap: wrap; align-items: baseline; }
+  .actions a, .actions button {
+    font: inherit;
+    font-size: 12.5px;
+    color: var(--text);
+    background: none;
+    border: 0;
+    border-bottom: 1px solid var(--text);
+    padding: 0 0 3px;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .actions button { color: var(--muted); border-bottom-color: var(--rule); }
+  .actions a:hover, .actions button:hover { opacity: .6; }
+
+  pre.cite {
+    display: none;
+    margin-top: 20px;
+    padding: 16px 0;
+    border-top: 1px solid var(--rule);
+    font-family: "Newsreader", Georgia, serif;
+    font-size: 14px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    color: var(--muted);
+  }
+  pre.cite.open { display: block; }
+
+  @media (max-width: 600px) {
+    .corner.top { top: 20px; left: 16px; }
+    .corner.right { bottom: 20px; right: 16px; }
+    main { padding: 96px 16px 96px; }
+    dl.stats { grid-template-columns: 1fr; }
+    dl.stats div + div { padding-left: 0; border-left: 0; border-top: 1px solid var(--rule); }
+  }
+</style>
+</head>
+<body>
+<nav class="corner top"><a href="../">←&ensp;Back</a></nav>
+<div class="corner right">Alexandre Hopman-Ruh</div>
+
+<main>
+  <p class="label">Research&ensp;·&ensp;April 2026</p>
+  <h1>The Anatomy of Album Sales</h1>
+  <p class="subtitle">Modeling the diffusion of Everclear’s <em>Sparkle and Fade</em></p>
+  <p class="byline">Alexandre Hopman-Ruh</p>
+
+  <figure>
+    <svg class="chart" id="chart" viewBox="0 0 600 260" role="img"
+         aria-label="Weekly unit sales of Sparkle and Fade from May 1995 to March 1996, with radio airplay and a four-week forecast for March 1996. Sales stay low through a mid-cycle trough, then jump at Christmas week and climb to about 30,000 a week."></svg>
+    <figcaption>
+      <span class="key"><i></i>Weekly unit sales</span>
+      <span class="key"><i class="air"></i>Radio airplay</span>
+      <span class="key"><i class="fc"></i>March 1996 forecast</span>
+    </figcaption>
+  </figure>
+
+  <div class="abstract">
+    <p>Released in May 1995, Everclear’s <em>Sparkle and Fade</em> followed a three-phase commercial path: an initial plateau, a mid-cycle trough, and a Christmas breakthrough that permanently shifted the weekly sales level. Radio airplay explains the broad trend but not the discontinuity at week 31.</p>
+    <p>Working within a timing-of-first-purchase framework, the paper builds from baseline Pareto II and Burr XII hazard models through radio-airplay covariates to a two-segment mixture. The preferred Burr XII two-segment model separates a small cohort of genre-committed fans, who buy on recognition when the lead single reaches their radio, from a much larger mainstream cohort, who convert only once cumulative exposure and chart visibility build. It gives the strongest fit and validation evidence of the models considered, and implies roughly 125,000 units across the four withheld weeks of March 1996.</p>
+  </div>
+
+  <dl class="stats">
+    <div><dd>5.6%</dd><dt>Holdout MAPE, weeks 36–41</dt></div>
+    <div><dd>8.4 / 91.6</dd><dt>Genre-fan / mainstream segment split, %</dt></div>
+    <div><dd>125k</dd><dt>Forecast units, March 1996</dt></div>
+  </dl>
+
+  <div class="actions">
+    <a href="../papers/hopman-ruh-album-sales-diffusion.pdf">Read the paper&ensp;(PDF, 18 pp.)</a>
+    <button type="button" id="citeBtn" aria-expanded="false" aria-controls="cite">Cite</button>
+  </div>
+  <pre class="cite" id="cite">Hopman-Ruh, A. (2026). The anatomy of album sales: Modeling the diffusion of Everclear’s Sparkle and Fade album sales [Unpublished manuscript].</pre>
+</main>
+
+<script>
+(() => {
+  const sales = [2061,1945,1945,1868,2249,2463,2671,2680,2808,3113,3093,3878,3445,2903,2056,1806,1726,2058,1926,1980,2575,2648,2800,3021,3745,4011,4621,4684,6819,9832,17642,16476,12724,17578,21204,22262,22612,24875,31929,29413,29239];
+  const airplay = [4347,5046,5015,5127,5274,5698,5586,5551,4032,2460,1962,1942,1871,1175,1134,1223,1498,1863,1810,3009,3608,4301,5851,6613,7352,8032,9785,11440,12177,13876,14270,15692,16317,20149,22488,24771,27415,30704,32568,35240,37840];
+  const forecast = [32296, 30412, 31189, 31516];   // weeks 42–45, Burr XII two-segment
+
+  const svg = document.getElementById('chart');
+  const NS = 'http://www.w3.org/2000/svg';
+  const W = 600, H = 260, L = 0, R = 600, T = 12, B = 228;
+  const weeks = 45, yMax = 35000, aMax = 42000;
+  const x = w => L + (w - 1) / (weeks - 1) * (R - L);
+  const y = v => B - v / yMax * (B - T);
+  const ya = v => B - v / aMax * (B - T);
+  const el = (tag, attrs) => {
+    const n = document.createElementNS(NS, tag);
+    for (const k in attrs) n.setAttribute(k, attrs[k]);
+    svg.appendChild(n);
+    return n;
+  };
+  const path = (vals, fx, fy, start = 1) =>
+    vals.map((v, i) => (i ? 'L' : 'M') + fx(i + start).toFixed(1) + ' ' + fy(v).toFixed(1)).join('');
+
+  // Mid-cycle trough (weeks 15–20)
+  el('rect', { x: x(15), y: T, width: x(20) - x(15), height: B - T, fill: 'var(--rule)', opacity: 0.35 });
+  // Baseline and gridlines
+  [10000, 20000, 30000].forEach(v => {
+    el('line', { x1: L, x2: R, y1: y(v), y2: y(v), stroke: 'var(--rule)', 'stroke-width': 0.6 });
+    el('text', { x: L, y: y(v) - 5 }).textContent = (v / 1000) + 'k';
+  });
+  el('line', { x1: L, x2: R, y1: B, y2: B, stroke: 'var(--line-2)', 'stroke-width': 0.6 });
+  // Christmas breakthrough (week 31) and end of observed data (week 41)
+  el('line', { x1: x(31), x2: x(31), y1: T, y2: B, stroke: 'var(--mark)', 'stroke-width': 0.7, 'stroke-dasharray': '2 3' });
+  el('text', { x: x(31) - 6, y: T + 8, 'text-anchor': 'end' }).textContent = 'Christmas breakthrough';
+  el('text', { x: (x(15) + x(20)) / 2, y: T + 8, 'text-anchor': 'middle' }).textContent = 'Trough';
+
+  el('path', { d: path(airplay, x, ya), fill: 'none', stroke: 'var(--line-2)', 'stroke-width': 1, 'stroke-dasharray': '3 3' });
+  el('path', { d: path(sales, x, y), fill: 'none', stroke: 'var(--line)', 'stroke-width': 1.4, 'stroke-linejoin': 'round' });
+  el('path', { d: path([sales[40], ...forecast], x, y, 41), fill: 'none', stroke: 'var(--mark)', 'stroke-width': 1.6, 'stroke-dasharray': '1 3.5', 'stroke-linecap': 'round' });
+  forecast.forEach((v, i) => el('circle', { cx: x(42 + i), cy: y(v), r: 1.8, fill: 'var(--mark)' }));
+
+  // Month ticks: week 1 is the week of May 28, 1995
+  [['Jun 1995', 1], ['Sep', 15], ['Dec', 28], ['Mar 1996', 41]].forEach(([label, w]) => {
+    el('text', { x: x(w), y: B + 20, 'text-anchor': w === 1 ? 'start' : 'middle' }).textContent = label;
+  });
+
+  const btn = document.getElementById('citeBtn');
+  const cite = document.getElementById('cite');
+  btn.addEventListener('click', () => {
+    const open = cite.classList.toggle('open');
+    btn.setAttribute('aria-expanded', open);
+  });
+})();
+</script>
+</body>
+</html>

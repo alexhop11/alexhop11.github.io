@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alexandre Hopman-Ruh</title>
+<meta name="description" content="Alexandre Hopman-Ruh. Research in applied statistics.">
+<meta name="author" content="Alexandre Hopman-Ruh">
+<meta property="og:title" content="Alexandre Hopman-Ruh">
+<meta property="og:description" content="Research in applied statistics.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#e7eff0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#06131a" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Person",
+  "name": "Alexandre Hopman-Ruh",
+  "alumniOf": {"@type": "CollegeOrUniversity", "name": "University of Pennsylvania"},
+  "knowsAbout": ["Statistics", "Finance", "Survival analysis", "Marketing analytics"]
+}
+</script>
+<style>
+  :root {
+    --bg-top: #e1edf1;
+    --bg-bottom: #ebf4ef;
+    --far: 92, 156, 212;     /* light blue at the horizon */
+    --near: 30, 104, 78;     /* pine green in the foreground */
+    --alpha-far: 0.34;
+    --alpha-near: 0.68;
+    --text: #18333a;
+    --muted: #5f777b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg-top: #050f16;
+      --bg-bottom: #08191c;
+      --far: 132, 192, 236;
+      --near: 74, 158, 118;
+      --alpha-far: 0.22;
+      --alpha-near: 0.58;
+      --text: #d9ece8;
+      --muted: #7d9a9c;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg-top: #050f16;
+    --bg-bottom: #08191c;
+    --far: 132, 192, 236;
+    --near: 74, 158, 118;
+    --alpha-far: 0.22;
+    --alpha-near: 0.58;
+    --text: #d9ece8;
+    --muted: #7d9a9c;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg-bottom);
+    background-image: linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+    color: var(--text);
+    font-family: "Inter", system-ui, -apple-system, sans-serif;
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  canvas {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    touch-action: none;
+  }
+  .corner {
+    position: fixed;
+    bottom: 28px;
+    color: var(--muted);
+    z-index: 1;
+    line-height: 1;
+  }
+  .corner.left { left: 32px; }
+  .corner.right { right: 32px; pointer-events: none; }
+  .corner a {
+    color: inherit;
+    text-decoration: none;
+    padding: 8px 0;
+    border-bottom: 1px solid transparent;
+    transition: color .2s, border-color .2s;
+  }
+  .corner a:hover, .corner a:focus-visible {
+    color: var(--text);
+    border-bottom-color: currentColor;
+    outline: none;
+  }
+  h1 { font: inherit; }
+  @media (max-width: 600px) {
+    .corner { bottom: 20px; }
+    .corner.left { left: 16px; }
+    .corner.right { right: 16px; }
+  }
+</style>
+</head>
+<body>
+<canvas id="sea" aria-hidden="true"></canvas>
+<nav class="corner left"><a href="research/">Research</a></nav>
+<h1 class="corner right">Alexandre Hopman-Ruh</h1>
+
+<script>
+(() => {
+  // An open-sea surface drawn as fine swell lines, packed tight near the top
+  // like a distant horizon and opening up toward the viewer. The pointer
+  // stirs a small wake; a click or tap drops a ripple that spreads outward.
+  const canvas = document.getElementById('sea');
+  const ctx = canvas.getContext('2d');
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Classic 3D Perlin noise, for the irregular chop on top of the swell
+  const perm = new Uint8Array(512);
+  {
+    const p = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) p[i] = i;
+    let seed = 11;
+    const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    for (let i = 255; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      [p[i], p[j]] = [p[j], p[i]];
+    }
+    for (let i = 0; i < 512; i++) perm[i] = p[i & 255];
+  }
+  const fade = t => t * t * t * (t * (t * 6 - 15) + 10);
+  const lerp = (a, b, t) => a + (b - a) * t;
+  function grad(h, x, y, z) {
+    h &= 15;
+    const u = h < 8 ? x : y;
+    const v = h < 4 ? y : (h === 12 || h === 14 ? x : z);
+    return ((h & 1) ? -u : u) + ((h & 2) ? -v : v);
+  }
+  function noise(x, y, z) {
+    const X = Math.floor(x) & 255, Y = Math.floor(y) & 255, Z = Math.floor(z) & 255;
+    x -= Math.floor(x); y -= Math.floor(y); z -= Math.floor(z);
+    const u = fade(x), v = fade(y), w = fade(z);
+    const A = perm[X] + Y, AA = perm[A] + Z, AB = perm[A + 1] + Z;
+    const B = perm[X + 1] + Y, BA = perm[B] + Z, BB = perm[B + 1] + Z;
+    return lerp(
+      lerp(lerp(grad(perm[AA], x, y, z), grad(perm[BA], x - 1, y, z), u),
+           lerp(grad(perm[AB], x, y - 1, z), grad(perm[BB], x - 1, y - 1, z), u), v),
+      lerp(lerp(grad(perm[AA + 1], x, y, z - 1), grad(perm[BA + 1], x - 1, y, z - 1), u),
+           lerp(grad(perm[AB + 1], x, y - 1, z - 1), grad(perm[BB + 1], x - 1, y - 1, z - 1), u), v),
+      w);
+  }
+
+  let W, H, dpr, lines, step;
+
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    lines = Math.round(Math.max(42, Math.min(90, H / 11)));
+    step = W < 700 ? 5 : 6;
+    if (reduceMotion) draw(performance.now());
+  }
+
+  const pointer = { x: -9999, y: -9999, tx: -9999, ty: -9999, strength: 0, target: 0, last: 0 };
+  const ripples = [];
+
+  function onMove(x, y) {
+    pointer.tx = x; pointer.ty = y;
+    if (pointer.x < -999) { pointer.x = x; pointer.y = y; }
+    pointer.target = 1;
+    pointer.last = performance.now();
+  }
+  window.addEventListener('pointermove', e => onMove(e.clientX, e.clientY), { passive: true });
+  window.addEventListener('pointerdown', e => {
+    onMove(e.clientX, e.clientY);
+    ripples.push({ x: e.clientX, y: e.clientY, t0: performance.now() });
+    if (ripples.length > 4) ripples.shift();
+    if (reduceMotion) draw(performance.now());
+  });
+  document.addEventListener('pointerleave', () => { pointer.target = 0; });
+
+  function draw(now) {
+    pointer.x += (pointer.tx - pointer.x) * 0.06;
+    pointer.y += (pointer.ty - pointer.y) * 0.06;
+    if (now - pointer.last > 2500) pointer.target = 0;
+    pointer.strength += (pointer.target - pointer.strength) * 0.03;
+
+    const t = now / 1000;
+    const css = getComputedStyle(document.documentElement);
+    const far = css.getPropertyValue('--far').split(',').map(Number);
+    const near = css.getPropertyValue('--near').split(',').map(Number);
+    const aFar = parseFloat(css.getPropertyValue('--alpha-far'));
+    const aNear = parseFloat(css.getPropertyValue('--alpha-near'));
+
+    const active = ripples.map(r => ({ x: r.x, y: r.y, age: (now - r.t0) / 1000 }))
+                          .filter(r => r.age < 5);
+    const wakeR2 = Math.pow(Math.min(W, H) * 0.14, 2);
+    const ps = pointer.strength;
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+
+    for (let i = 0; i < lines; i++) {
+      const u = i / (lines - 1);
+      const depth = Math.pow(u, 1.55);             // 0 at the horizon, 1 at the viewer
+      const base = -8 + depth * (H + 40);
+      const amp = 1.5 + depth * Math.min(52, H * 0.06);
+      const fm = lerp(2.6, 1, depth);              // distant swells look shorter
+      const k = 0.0068 * fm;
+      const phase = i * 0.33;
+
+      ctx.beginPath();
+      for (let x = -step; x <= W + step; x += step) {
+        let h = 0.55 * Math.sin(k * x - 0.9 * t + phase)
+              + 0.28 * Math.sin(k * 1.9 * x + 0.6 * t + phase * 0.7 + 1.3)
+              + 0.65 * noise(x * 0.0024 * fm, i * 0.085, t * 0.12);
+        let y = base - amp * h;
+
+        if (ps > 0.001) {
+          const dx = x - pointer.x, dy = y - pointer.y;
+          const d2 = dx * dx + dy * dy;
+          if (d2 < wakeR2 * 6) {
+            y += ps * (5 + 12 * depth) * Math.exp(-d2 / wakeR2) * Math.cos(Math.sqrt(d2) * 0.07 - t * 3.2);
+          }
+        }
+        for (const r of active) {
+          const d = Math.hypot(x - r.x, (y - r.y) * 1.6);   // squashed: ripples seen at an angle
+          const kk = d - r.age * 260;
+          y += (6 + 14 * depth) * Math.exp(-(kk * kk) / 3600) * Math.cos(kk * 0.055) * (1 - r.age / 5);
+        }
+        x === -step ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      const c = far.map((v, j) => Math.round(lerp(v, near[j], depth)));
+      const crest = i % 6 === 3;                   // every sixth line a touch stronger
+      ctx.strokeStyle = `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${lerp(aFar, aNear, depth) * (crest ? 1.35 : 1)})`;
+      ctx.lineWidth = lerp(0.45, crest ? 1.1 : 0.8, depth);
+      ctx.stroke();
+    }
+  }
+
+  function loop(now) {
+    draw(now);
+    requestAnimationFrame(loop);
+  }
+
+  window.addEventListener('resize', resize);
+  resize();
+  if (!reduceMotion) requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
